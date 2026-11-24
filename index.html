@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SeeMyRisks Stress Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a sober newspaper graphics desk explaining risk, plainly
+   IDEA: a printed stress-test ledger: your money, ruled lines, crash by crash
+   PICTURE: the live result panel: bars of what is left after each crash, you vs SPY vs QQQ
+   COLOUR and TYPE: stone ground, white panels, black ink, brick red for losses; Schibsted Grotesk
+   LAYOUT: tool first (inputs left, big readout right), then a ruled model-portfolio table, guru books, assumptions */
+:root{color-scheme:light dark;
+--bg:light-dark(#e7e4df,#171513);--panel:light-dark(#ffffff,#221f1c);--ink:light-dark(#161412,#efebe5);
+--mute:light-dark(#5d5853,#a8a199);--rule:light-dark(#cfcac2,#3a3531);--brick:light-dark(#c8371e,#ec5a3e);
+--spy:light-dark(#3f3b37,#cfc8bf);--qqq:light-dark(#9a938b,#7c756e);--soft:light-dark(#f4f2ee,#2a2622)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 'Schibsted Grotesk',system-ui,sans-serif;overflow-x:clip}
+a{color:inherit}
+.band{padding:clamp(28px,4vw,64px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;justify-content:space-between;padding:16px max(5vw,16px);border-bottom:1px solid var(--rule);background:var(--panel)}
+.logo{font-weight:800;font-size:22px;letter-spacing:-.5px}.logo b{color:var(--brick)}
+nav{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:15px}nav a{text-decoration:none;color:var(--mute)}nav a:hover{color:var(--ink)}
+h1,h2,h3{line-height:1.05;margin:0;text-wrap:balance;font-weight:800}
+h1{font-size:clamp(32px,4.4vw,52px);letter-spacing:-1px;max-width:22ch}
+h2{font-size:clamp(28px,3vw,40px);letter-spacing:-.5px}
+h3{font-size:20px}
+.lede{color:var(--mute);max-width:66ch;margin:12px 0 0;font-size:17px}
+.tool{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:24px;margin-top:28px}
+.card{background:var(--panel);border:1px solid var(--rule);padding:22px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 16px}
+button,select,input{font:inherit;font-size:16px;color:var(--ink)}
+button{min-height:44px;padding:8px 14px;background:var(--soft);border:1px solid var(--rule);cursor:pointer}
+button:hover{border-color:var(--ink)}button.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--brick);outline-offset:2px}
+.rows{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,1.3fr) 44px;gap:8px}
+.row input,.row select{min-height:44px;padding:6px 10px;background:var(--panel);border:1px solid var(--rule);width:100%}
+.row .x{padding:0;font-size:20px}
+.lab{font-size:13px;color:var(--mute);margin:16px 0 6px}
+.lev{display:flex;flex-wrap:wrap;gap:6px}
+.note{font-size:13px;color:var(--mute);margin-top:10px}
+.big{font-size:clamp(44px,6vw,72px);font-weight:800;letter-spacing:-2px;line-height:1;color:var(--brick);font-variant-numeric:tabular-nums}
+.big.ok{color:var(--ink)}
+.read{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin:6px 0 4px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--mute);margin:14px 0 6px}
+.legend i{display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-1px}
+.sc{border-top:1px solid var(--rule);padding:10px 0}
+.sc h4{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.sc h4 span{color:var(--mute);font-weight:400}
+.bar{display:grid;grid-template-columns:44px minmax(0,1fr) 96px;align-items:center;gap:8px;font-size:13px;margin:3px 0}
+.track{height:14px;background:var(--soft)}.fill{height:100%}
+.bar b{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.flags{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.flag{font-size:14px;padding:8px 10px;background:var(--soft);border-inline-start:4px solid var(--brick)}
+.flag.good{border-inline-start-color:var(--spy)}
+.slider{margin-top:14px}.slider input{width:100%;accent-color:var(--brick)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:12px 10px;border-bottom:1px solid var(--rule);text-align:right;vertical-align:top}
+th{font-size:13px;color:var(--mute);font-weight:500;border-bottom:2px solid var(--ink)}
+th:first-child,td:first-child{text-align:left}
+td.neg{color:var(--brick);font-weight:700}
+.side{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:28px;margin-top:22px;align-items:start}
+.verdict{border-top:4px solid var(--brick);padding-top:12px;font-size:17px}
+.verdict p{margin:0 0 12px}
+.books{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:20px;margin-top:22px}
+.hrow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 64px;gap:10px;align-items:center;font-size:14px;margin:6px 0}
+.hrow b{text-align:right;font-variant-numeric:tabular-nums}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:20px;margin-top:22px}
+.steps .card p{margin:8px 0 0;color:var(--mute)}
+.num{font-size:40px;font-weight:800;color:var(--brick);line-height:1}
+.ass input{width:72px;min-height:40px;padding:4px 8px;text-align:right;background:var(--panel);border:1px solid var(--rule)}
+footer{font-size:14px;color:var(--mute);border-top:1px solid var(--rule)}
+pre,.scroll{overflow-x:auto}
+@media(max-width:900px){.tool,.side{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){table{font-size:13px}.row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px}.row select{grid-column:1/3}.row .x{grid-row:1;grid-column:3}.bar{grid-template-columns:36px minmax(0,1fr) 84px}
+.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mute)}.stack td:empty{display:none}}
+@media(prefers-reduced-motion:no-preference){.fill{transition:width .5s ease}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header>
+<div class="logo">See<b>My</b>Risks</div>
+<nav><a href="#tool">Stress test</a><a href="#models">Model portfolios</a><a href="#books">Public portfolios</a><a href="#how">How to use</a><a href="#assumptions">Assumptions</a></nav>
+</header>
+
+<section class="band" id="tool"><div class="wrap">
+<h1>What would the last four crashes do to your portfolio?</h1>
+<p class="lede">Enter your holdings by type, choose how much you borrow, and see what would be left after the 2000, 2008, 2020 and 2022 crashes, next to the same money in SPY and QQQ. Everything stays in your browser. Nothing is sent anywhere.</p>
+<div class="tool">
+<div class="card">
+<h3>Your portfolio</h3>
+<div class="lab">Load an example</div>
+<div class="presets" id="presets"></div>
+<div class="row lab" style="margin:0 0 4px" aria-hidden="true"><span>Name</span><span>Amount ($)</span><span>Type</span><span></span></div>
+<div class="rows" id="rows"></div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"><button id="add">+ Add holding</button><button id="clear">Clear</button></div>
+<div class="lab">Borrowing (leverage)</div>
+<div class="lev" id="lev"></div>
+<p class="note" id="levnote"></p>
+</div>
+<div class="card" aria-live="polite">
+<div class="lab" style="margin-top:0">Your account in the worst of the four crashes</div>
+<div class="read"><div class="big" id="worst">–</div><div id="worstsub" style="color:var(--mute)"></div></div>
+<div class="legend"><span><i style="background:var(--brick)"></i>You</span><span><i style="background:var(--spy)"></i>SPY, no borrowing</span><span><i style="background:var(--qqq)"></i>QQQ, no borrowing</span></div>
+<div id="scen"></div>
+<div class="slider sc">
+<h4><label for="mkt">Your own scenario: the S&amp;P 500 moves</label><span id="mktv">−30%</span></h4>
+<input type="range" id="mkt" min="-60" max="60" step="5" value="-30">
+<div id="custom"></div>
+</div>
+<div class="flags" id="flags"></div>
+</div>
+</div>
+</div></section>
+
+<section class="band" id="models" style="background:var(--panel)"><div class="wrap">
+<h2>Even the safest-looking portfolios have halved before</h2>
+<p class="lede">Peak-to-trough falls on a price basis, rounded. A 4x-borrowed AI chip portfolio is shown for comparison: it is a hypothetical, not a real fund.</p>
+<div class="side">
+<div class="scroll"><table class="stack">
+<thead><tr><th>Portfolio</th><th>2000–02 dot-com</th><th>2008–09 financial crisis</th><th>2020 COVID</th><th>2022 inflation</th></tr></thead>
+<tbody id="modelrows"></tbody>
+</table></div>
+<aside class="verdict">
+<p><b>The index funds all survived.</b> Painful, but anyone who held on recovered.</p>
+<p><b>4x borrowing on chip stocks was wiped out in every crash.</b> At 4x, a 25% fall takes your account to zero.</p>
+<p style="color:var(--mute);font-size:14px">Sources: Hartford Funds and Benzinga (S&amp;P 500), Bloomberg via Advisor Perspectives and Trefis (QQQ, chips), Business Insider and Alphacubator (Berkshire). Dow and some Berkshire figures are approximate.</p>
+</aside>
+</div>
+</div></section>
+
+<section class="band" id="books"><div class="wrap">
+<h2>Public portfolios: how concentrated are the experts?</h2>
+<p class="lede">From U.S. SEC 13F filings as of 30 September 2026. 13F filings show U.S. listed holdings only: no cash, no shorts, no private stakes. Load one into the stress test to see its crash behaviour.</p>
+<div class="books" id="booklist"></div>
+</div></section>
+
+<section class="band" id="how" style="background:var(--panel)"><div class="wrap">
+<h2>How to use it in three minutes</h2>
+<div class="steps">
+<div class="card"><div class="num">1</div><h3 style="margin-top:8px">Group your holdings</h3><p>Add each holding with its dollar value and the type closest to it. Apple and Microsoft are "Tech / Nasdaq-100", Nvidia or SanDisk "Chips / AI hardware", an S&amp;P 500 fund "US broad index".</p></div>
+<div class="card"><div class="num">2</div><h3 style="margin-top:8px">Be honest about borrowing</h3><p>Margin loans, leveraged ETFs and loans against your shares all count. 2x means you hold $2 of stock for every $1 of your own money.</p></div>
+<div class="card"><div class="num">3</div><h3 style="margin-top:8px">Compare, don't predict</h3><p>The next crash will be different. Use the gap between you and SPY or QQQ to see whether you are taking more risk than you think.</p></div>
+</div>
+<p class="lede" style="margin-top:22px">Want a public portfolio featured in a video? Suggest a fund or a well-known investor's 13F in the comments on our YouTube channel. We only analyse public portfolios and do not review personal ones.</p>
+</div></section>
+
+<section class="band" id="assumptions"><div class="wrap">
+<h2>The assumptions, which you can edit</h2>
+<p class="lede">Crash moves per holding type. Index rows use historical falls; the others are rough estimates, marked approx. Change any number to your own view; your edits are kept in this browser. "Sensitivity" scales your own scenario: 1.3 means it moves 1.3 times as much as the S&amp;P 500.</p>
+<div class="scroll" style="margin-top:20px"><table class="ass">
+<thead><tr><th>Type</th><th>2000–02</th><th>2008–09</th><th>2020</th><th>2022</th><th>Sensitivity</th></tr></thead>
+<tbody id="assrows"></tbody>
+</table></div>
+<div style="margin-top:12px"><button id="resetass">Reset to defaults</button></div>
+</div></section>
+
+<footer class="band"><div class="wrap">
+<p><b>Educational tool, not financial advice.</b> SeeMyRisks does not recommend buying, selling or holding any investment, and does not review personal portfolios. Results are simplified: they use one move per crash, ignore interest, fees, dividends and the timing of margin calls, and cannot predict future markets. Hypothetical portfolios are illustrations, not real funds. Consider speaking with a licensed financial adviser before using borrowing or options.</p>
+</div></footer>
+
+<script>
+{
+const SC=['2000–02','2008–09','2020','2022'];
+const DEF={
+broad:{n:'US broad index (S&P 500)',m:[-49,-57,-34,-25],b:1},
+tech:{n:'Tech / Nasdaq-100',m:[-83,-53,-29,-35],b:1.3},
+chip:{n:'Chips / AI hardware',m:[-84,-62,-34,-45],b:1.7,ap:1},
+blue:{n:'Blue chips / Dow-style',m:[-38,-54,-37,-22],b:.9,ap:1},
+brk:{n:'Berkshire Hathaway stock',m:[0,-54,-30,-27],b:.8,ap:1},
+spec:{n:'Small-cap / speculative',m:[-75,-70,-45,-60],b:2,ap:1},
+crypto:{n:'Crypto',m:[-75,-75,-50,-77],b:2.5,ap:1},
+bond:{n:'Bonds',m:[5,5,-5,-17],b:.1,ap:1},
+cash:{n:'Cash',m:[0,0,0,0],b:0}};
+let A=JSON.parse(JSON.stringify(DEF));
+const PRE=[
+{k:'S&P 500 only',l:1,h:[['S&P 500 fund',100000,'broad']]},
+{k:'60/40',l:1,h:[['S&P 500 fund',60000,'broad'],['Bond fund',40000,'bond']]},
+{k:'All-in QQQ',l:1,h:[['QQQ',100000,'tech']]},
+{k:'Berkshire 13F',l:1,h:[['Apple 25%',25000,'tech'],['American Express 15%',15200,'blue'],['Other 28 stocks 60%',59800,'blue']]},
+{k:'Situational Awareness, Sep 2026',l:1,h:[['SharonAI',27900,'spec'],['Bloom Energy calls',24700,'spec'],['Nebius calls',21100,'spec'],['SanDisk calls',11600,'chip'],['Memory ETF calls',8900,'chip'],['Miners and data centres',5800,'spec']]},
+{k:'Leopold-style 4x (hypothetical)',l:4,h:[['Memory chips',55600,'chip'],['Other chips',25000,'chip'],['Power and neoclouds',19400,'spec']]}];
+const BOOKS=[
+{t:'Berkshire Hathaway',s:'30 positions · $304.2B · plus about $352B in cash and T-bills not shown in 13F',p:3,h:[['Apple',25.0],['American Express',15.2],['Next 3: Alphabet, Coca-Cola, Bank of America',31.8],['Other 25 positions',28.0]],f:'Top 5 about 72% · no borrowing'},
+{t:'Situational Awareness LP',s:'9 positions · $1.58B · options shown at the value of the shares they control',p:4,h:[['SharonAI (shares)',27.9],['Bloom Energy (calls)',24.7],['Nebius (calls)',21.1],['SanDisk (calls)',11.6],['Memory ETF (calls)',8.9],['4 small positions',5.8]],f:'Top 5 = 94% · two crashes in 2026'}];
+let st={rows:[],lev:1};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=v=>v<=0?'$0':'$'+Math.round(v).toLocaleString('en-US');
+const pct=v=>(v>0?'+':v<0?'−':'')+Math.abs(Math.round(v))+'%';
+function save(){try{localStorage.setItem('smr1',JSON.stringify({st,A}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem('smr1')||'null');if(d&&d.st&&d.A){st=d.st;for(const k in DEF)if(d.A[k])A[k]=d.A[k];return true}}catch(e){}return false}
+function useP(i){const p=PRE[i];st={rows:p.h.map(r=>({n:r[0],v:r[1],t:r[2]})),lev:p.l,pre:i};render()}
+function total(){return st.rows.reduce((s,r)=>s+(+r.v||0),0)}
+function move(rows,sel){const T=rows.reduce((s,r)=>s+(+r.v||0),0);if(!T)return 0;return rows.reduce((s,r)=>s+(+r.v||0)/T*sel(A[r.t]||A.cash),0)}
+function after(T,L,r){return Math.max(0,T*(1+L*r/100))}
+function bar(lbl,col,val,T){const w=T?Math.max(0,Math.min(100,val/T*100)):0;return `<div class="bar"><span>${lbl}</span><div class="track"><div class="fill" style="width:${w}%;background:${col}"></div></div><b>${val<=0?'<span style="color:var(--brick)">Wiped out</span>':fmt(val)}</b></div>`}
+function block(title,r,T,L,rs,rq){const you=after(T,L,r);return `<div class="sc"><h4>${title}<span>you ${pct((you/T-1)*100)}</span></h4>${bar('You','var(--brick)',you,T)}${bar('SPY','var(--spy)',after(T,1,rs),T)}${bar('QQQ','var(--qqq)',after(T,1,rq),T)}</div>`}
+function render(){
+$('presets').innerHTML=PRE.map((p,i)=>`<button data-p="${i}" class="${st.pre===i?'on':''}">${esc(p.k)}</button>`).join('');
+$('rows').innerHTML=st.rows.map((r,i)=>`<div class="row"><input aria-label="Holding name" data-i="${i}" data-f="n" value="${esc(r.n)}"><input aria-label="Amount in dollars" inputmode="numeric" data-i="${i}" data-f="v" value="${esc(r.v)}"><select aria-label="Holding type" data-i="${i}" data-f="t">${Object.keys(A).map(k=>`<option value="${k}" ${k===r.t?'selected':''}>${esc(A[k].n)}</option>`).join('')}</select><button class="x" aria-label="Remove holding" data-del="${i}">×</button></div>`).join('')||'<p class="note">No holdings yet. Load an example or add one.</p>';
+$('lev').innerHTML=[1,1.5,2,3,4].map(l=>`<button data-l="${l}" class="${st.lev===l?'on':''}">${l===1?'None (1x)':l+'x'}</button>`).join('');
+const L=st.lev;$('levnote').textContent=L>1?`You hold $${L} of stock for every $1 of your own money. A ${Math.round(100/L)}% fall wipes you out.`:'No borrowed money: you can never lose more than you put in.';
+calc();save()}
+function calc(){
+const T=total(),L=st.lev;
+if(!T){$('worst').textContent='–';$('worstsub').textContent='Add a holding to start';$('scen').innerHTML='';$('custom').innerHTML='';$('flags').innerHTML='';return}
+const rs=SC.map((_,i)=>move(st.rows,a=>a.m[i]));
+const res=rs.map(r=>after(T,L,r));const w=Math.min(...res),wi=res.indexOf(w);
+$('worst').textContent=fmt(w);$('worst').className='big'+(w/T>.6?' ok':'');
+$('worstsub').textContent=`from ${fmt(T)} · ${SC[wi]} · ${w<=0?'wiped out':pct((w/T-1)*100)}`;
+$('scen').innerHTML=SC.map((s,i)=>block(s,rs[i],T,L,A.broad.m[i],A.tech.m[i])).join('');
+const m=+$('mkt').value;$('mktv').textContent=pct(m);
+const rc=move(st.rows,a=>a.b*m);
+$('custom').innerHTML=bar('You','var(--brick)',after(T,L,rc),T)+bar('SPY','var(--spy)',after(T,1,m),T)+bar('QQQ','var(--qqq)',after(T,1,A.tech.b*m),T)+`<p class="note">You ${pct(Math.max(-100,L*rc))} · SPY ${pct(m)} · QQQ ${pct(A.tech.b*m)}. Bars stop at the starting amount; gains show in the dollar figure.</p>`;
+const big=st.rows.reduce((b,r)=>(+r.v||0)>(+b.v||0)?r:b,st.rows[0]);const bs=(+big.v||0)/T*100;
+const byT={};st.rows.forEach(r=>byT[r.t]=(byT[r.t]||0)+(+r.v||0));const tk=Object.keys(byT).sort((a,b)=>byT[b]-byT[a])[0];const ts=byT[tk]/T*100;
+const f=[];
+if(L>1.5)f.push(['Borrowing',`At ${L}x, a ${Math.round(100/L)}% market fall takes your account to zero, and brokers usually sell you out well before that.`]);
+if(bs>25&&st.rows.length>1)f.push(['Concentration',`Your largest holding, ${big.n||'unnamed'}, is ${Math.round(bs)}% of the portfolio. A common rule of thumb keeps any one stock under 5–10%.`]);
+if(ts>50&&!['broad','cash','bond'].includes(tk))f.push(['One theme',`${Math.round(ts)}% is in ${A[tk].n}. If that theme falls together, everything falls together.`]);
+if(!f.length)f.push(['good','No borrowing and no single position above 25%: your risk comes mainly from the market itself.']);
+$('flags').innerHTML=f.map(x=>x[0]==='good'?`<div class="flag good">${esc(x[1])}</div>`:`<div class="flag"><b>${esc(x[0])}:</b> ${esc(x[1])}</div>`).join('')}
+function models(){const rows=[['S&P 500 (SPY)',A.broad.m],['Nasdaq-100 (QQQ)',A.tech.m],['Dow Jones, approx.',A.blue.m],['Berkshire stock (BRK.B)',['Rose',-54,'about −30%',-27]],['Chip stocks (SMH-style)',A.chip.m],['Chip stocks with 4x borrowing (hypothetical)',A.chip.m.map(v=>4*v<=-100?'Wiped out':pct(4*v))]];
+$('modelrows').innerHTML=rows.map(r=>`<tr><td><b>${esc(r[0])}</b></td>${r[1].map(v=>`<td class="${typeof v==='string'&&v!=='Rose'?(v==='Wiped out'?'neg':''):(v<=-50?'neg':'')}">${typeof v==='number'?pct(v):esc(v)}</td>`).join('')}</tr>`).join('')}
+function books(){$('booklist').innerHTML=BOOKS.map((b,i)=>`<div class="card"><h3>${esc(b.t)}</h3><p class="note" style="margin:4px 0 12px">${esc(b.s)}</p>${b.h.map(h=>`<div class="hrow"><span>${esc(h[0])}</span><div class="track"><div class="fill" style="width:${h[1]/30*100>100?100:h[1]/30*100}%;background:var(--brick)"></div></div><b>${h[1].toFixed(1)}%</b></div>`).join('')}<p class="note">${esc(b.f)}</p><button data-load="${i}" style="margin-top:8px">Stress-test this portfolio</button></div>`).join('')}
+function ass(){$('assrows').innerHTML=Object.keys(A).map(k=>`<tr><td>${esc(A[k].n)}${A[k].ap?' <span class="note">approx.</span>':''}</td>${A[k].m.map((v,i)=>`<td><input aria-label="${esc(A[k].n)} ${SC[i]}" data-k="${k}" data-m="${i}" value="${v}" inputmode="numeric"></td>`).join('')}<td><input aria-label="${esc(A[k].n)} sensitivity" data-k="${k}" data-b="1" value="${A[k].b}" inputmode="decimal"></td></tr>`).join('')}
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+if(t.dataset.p!==undefined)useP(+t.dataset.p);
+else if(t.dataset.l)st.lev=+t.dataset.l,st.pre=null,render();
+else if(t.dataset.del!==undefined){st.rows.splice(+t.dataset.del,1);st.pre=null;render()}
+else if(t.id==='add'){st.rows.push({n:'',v:10000,t:'broad'});st.pre=null;render()}
+else if(t.id==='clear'){st={rows:[],lev:1};render()}
+else if(t.dataset.load!==undefined){useP(BOOKS[+t.dataset.load].p);location.hash='tool';$('tool').scrollIntoView()}
+else if(t.id==='resetass'){A=JSON.parse(JSON.stringify(DEF));ass();models();render()}});
+$('rows').addEventListener('input',e=>{const el=e.target,i=+el.dataset.i,f=el.dataset.f;if(!st.rows[i])return;st.rows[i][f]=f==='v'?(parseFloat(String(el.value).replace(/[^0-9.]/g,''))||0):el.value;st.pre=null;calc();save();$('presets').querySelectorAll('button').forEach(b=>b.classList.remove('on'))});
+$('rows').addEventListener('change',e=>{if(e.target.dataset.f==='t')render()});
+$('mkt').addEventListener('input',calc);
+$('assrows').addEventListener('change',e=>{const el=e.target,k=el.dataset.k,v=parseFloat(el.value);if(!A[k]||isNaN(v))return;if(el.dataset.b)A[k].b=v;else A[k].m[+el.dataset.m]=v;models();render()});
+if(!load())useP(5);
+books();ass();models();render();
+}
+</script>
+</body>
+</html>
